@@ -18,6 +18,39 @@ const btnCriar = document.getElementById("btnCriar");
 const mensagem = document.getElementById("mensagem");
 
 
+// Mostra o motivo real da falha (antes, todo erro virava
+// "Email ou senha incorretos", inclusive erro de banco/rede).
+function explicarErroLogin(error) {
+  const codigo = String(error?.code || "");
+  const texto = String(error?.message || error || "");
+
+  if (
+    [
+      "auth/invalid-credential",
+      "auth/wrong-password",
+      "auth/user-not-found",
+      "auth/invalid-email",
+      "auth/missing-password",
+    ].includes(codigo)
+  ) {
+    return "Email ou senha incorretos.";
+  }
+
+  if (codigo === "auth/too-many-requests") {
+    return "Muitas tentativas. Aguarde alguns minutos e tente de novo.";
+  }
+
+  if (codigo === "auth/network-request-failed") {
+    return "Sem conexão com o servidor de login. Verifique a internet.";
+  }
+
+  if (/permission[_ ]denied/i.test(codigo + " " + texto)) {
+    return "Login OK, mas o banco de dados recusou o acesso aos seus dados (permission denied). Avise o administrador do Firebase.";
+  }
+
+  return `Erro no login: ${codigo || texto}`;
+}
+
 // ================= LOGIN =================
 
 btnEntrar.addEventListener(
@@ -119,10 +152,10 @@ window.location.href =
 
     } catch(error) {
 
-      mensagem.innerHTML =
-        "Email ou senha incorretos";
+      console.error("Falha no login:", error);
 
-      console.log(error);
+      mensagem.textContent =
+        explicarErroLogin(error);
     }
   }
 );

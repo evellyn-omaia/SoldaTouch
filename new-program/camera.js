@@ -155,8 +155,7 @@ const camera = new CameraGestos({
     el("estadoCamera").textContent = mensagem;
     el("seloCamera").textContent =
       estado === "ativa" ? "Ao vivo · processamento local" : "Câmera desligada";
-    el("ativar").disabled =
-      !sessao || estado === "preparando" || estado === "ativa";
+    el("ativar").disabled = estado === "preparando" || estado === "ativa";
     el("encerrar").disabled = !["ativa", "preparando"].includes(estado);
     el("alternar").disabled = estado !== "ativa";
     el("video").classList.toggle("frontal", camera.lado === "user");
@@ -177,6 +176,18 @@ const camera = new CameraGestos({
       ` Mãos: ${resultado?.landmarks?.length || 0}. ${categoria?.categoryName || "Sem categoria"}: ${Math.round((categoria?.score || 0) * 100)}%.`;
   },
   async aoGesto(gesto) {
+    // Modo livre (sem login/produção configurada): o gesto vai direto para a máquina.
+    if (!sessao) {
+      try {
+        const mensagem = await publicarGestoMQTT(gesto);
+        el("resultado").textContent =
+          `${mensagem.gesto} enviado à máquina. Aguardando confirmação do CLP...`;
+        el("producao").textContent = "Gesto enviado · aguardando o CLP";
+      } catch (erro) {
+        el("resultado").textContent = erro.message;
+      }
+      return;
+    }
     try {
       // Releitura impede reutilizar configuração substituída em outra navegação desta aba.
       const atual = lerSessao(sessionStorage, contexto);
@@ -232,11 +243,28 @@ function invalidar(mensagem) {
   el("simulacaoVirtual").src = "about:blank";
   el("simulacaoVirtual").hidden = true;
   el("abrirSimulacao").disabled = true;
-  el("conexao").textContent = "Desconectado";
+  el("conexao").textContent = mqttVisao?.connected
+    ? "MQTT conectado"
+    : "MQTT desconectado";
   el("quantidade").textContent = "—";
   el("programas").replaceChildren();
   el("resultado").textContent = "Nenhuma solicitação enviada.";
   el("revalidar").hidden = false;
+}
+
+// Sem login ou sem produção configurada: a câmera funciona e o gesto vai direto para a máquina.
+function entrarModoLivre(motivo) {
+  const item = document.createElement("li");
+  item.textContent =
+    "Modo livre (sem login): mão aberta gira a mesa, punho fechado para tudo.";
+  el("programas").replaceChildren(item);
+  el("quantidade").textContent = "—";
+  el("conexao").textContent = mqttVisao?.connected
+    ? "MQTT conectado"
+    : "Conectando ao MQTT...";
+  el("ativar").disabled = false;
+  el("revalidar").hidden = true;
+  console.info("[VISÃO] Modo livre:", motivo);
 }
 
 async function preparar(ativarAutomaticamente = false) {
@@ -303,11 +331,10 @@ async function preparar(ativarAutomaticamente = false) {
     // A caixa de permissão pode permanecer aberta indefinidamente; não bloquear revalidação.
     if (ativarAutomaticamente) void camera.iniciar();
   } catch (erro) {
-    if (geracao === geracaoValidacao)
-      invalidar(
-        erro.message ||
-          "Não foi possível validar a configuração. Verifique a conexão e tente novamente.",
-      );
+    if (geracao === geracaoValidacao) {
+      entrarModoLivre(erro.message);
+      if (ativarAutomaticamente) void camera.iniciar();
+    }
   } finally {
     validando = false;
     el("revalidar").disabled = false;
@@ -315,7 +342,7 @@ async function preparar(ativarAutomaticamente = false) {
 }
 
 el("ativar").addEventListener("click", () => {
-  if (sessao) void camera.iniciar();
+  void camera.iniciar();
 });
 el("abrirSimulacao").addEventListener("click", () => {
   if (!sessao) return;
@@ -328,7 +355,7 @@ el("abrirSimulacao").addEventListener("click", () => {
 });
 el("encerrar").addEventListener("click", () => camera.parar());
 el("alternar").addEventListener("click", () => {
-  if (sessao) void camera.alternar();
+  void camera.alternar();
 });
 el("revalidar").addEventListener("click", () => void preparar());
 document
@@ -337,7 +364,7 @@ document
 document.addEventListener("visibilitychange", () => {
   if (document.hidden)
     invalidar(
-      "Câmera encerrada enquanto a página está em segundo plano. Valide a conexão para continuar.",
+      "Câmera encerrada enquanto a página estava em segundo plano. Toque em Ativar câmera para continuar.",
     );
 });
 window.addEventListener("offline", () =>
