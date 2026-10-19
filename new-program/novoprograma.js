@@ -3763,6 +3763,43 @@ async function iniciarSistema() {
 
   let filaSalva = localStorage.getItem("filaProducao");
 
+// ==========================================
+// PROGRAMA SELECIONADO PELA CAMERA DO CELULAR
+// ==========================================
+
+const parametrosVisao = new URLSearchParams(window.location.search);
+
+const programaVisao = parametrosVisao.get("programaVisao");
+const quantidadeVisao = Number(parametrosVisao.get("quantidade"));
+
+const quantidadeValida =
+  Number.isSafeInteger(quantidadeVisao) &&
+  quantidadeVisao >= 1 &&
+  quantidadeVisao <= 10000;
+
+if (programaVisao && quantidadeValida) {
+  // A câmera não sobrescreve uma fila já existente.
+  if (!filaSalva) {
+    filaSalva = JSON.stringify([
+      {
+        programa: programaVisao,
+        quantidade: quantidadeVisao
+      }
+    ]);
+
+    console.log(
+      "[VISÃO] Fila recebida da câmera:",
+      programaVisao,
+      quantidadeVisao
+    );
+  } else {
+    console.warn(
+      "[VISÃO] Já existe uma fila de produção. " +
+      "A seleção da câmera não substituirá a fila atual."
+    );
+  }
+}
+
   let producaoSalvaFirebase = null;
 
   try {
@@ -4891,3 +4928,67 @@ document
 document
   .getElementById("btnMarcarBaseEncoder")
   ?.addEventListener("click", () => marcarReferenciaEncoderZ("BASE"));
+
+
+  // ==========================================
+// CONTROLE DA SIMULAÇÃO 3D POR GESTOS
+// ==========================================
+
+window.controlarSimulacaoPorGesto = async function (gesto) {
+  if (maquinaRealAtiva()) {
+    throw new Error(
+      "Gestos não autorizados para controle físico nesta integração."
+    );
+  }
+
+  if (gesto !== "START" && gesto !== "PAUSA") {
+    throw new Error("Gesto não reconhecido.");
+  }
+
+  if (gesto === "PAUSA") {
+    if (
+      !executandoPrograma ||
+      programaPausado ||
+      estadoExecucao !== EstadoExecucao.EXECUTANDO
+    ) {
+      return {
+        estado: estadoExecucao,
+        mensagem: "Não existe execução ativa para pausar."
+      };
+    }
+
+    await alternarMovimento();
+
+    return {
+      estado: estadoExecucao,
+      mensagem: "Simulação pausada pelo gesto."
+    };
+  }
+
+  if (
+    executandoPrograma &&
+    programaPausado &&
+    estadoExecucao === EstadoExecucao.PAUSADO
+  ) {
+    await alternarMovimento();
+
+    return {
+      estado: estadoExecucao,
+      mensagem: "Simulação retomada pelo gesto."
+    };
+  }
+
+ if (estadoExecucao === EstadoExecucao.AGUARDANDO_INICIO) {
+  await confirmarInicioCiclo();
+
+  return {
+    estado: estadoExecucao,
+    mensagem: "Início da simulação solicitado pelo gesto START."
+  };
+}
+
+return {
+  estado: estadoExecucao,
+  mensagem: "Nenhuma produção preparada para iniciar."
+};
+};

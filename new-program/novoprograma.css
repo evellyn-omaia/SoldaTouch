@@ -602,3 +602,50 @@ canvas{
     display:none;
   }
 }
+
+/* =====================================
+   CORREÇÃO DO PAINEL DE CÂMERA E GESTOS
+===================================== */
+
+#painelConexao {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  left: auto;
+
+  z-index: 100;
+  pointer-events: auto;
+
+  max-height: calc(100dvh - 40px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+#painelConexao details {
+  position: relative;
+  z-index: 101;
+  pointer-events: auto;
+}
+
+#painelConexao summary {
+  display: list-item;
+  cursor: pointer;
+  pointer-events: auto;
+  padding: 10px 0;
+  font-weight: 600;
+  touch-action: manipulation;
+}
+
+#painelConexao details[open] {
+  padding-bottom: 12px;
+}
+
+#videoIntegrado {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  border-radius: 10px;
+  background: #020617;
+  margin: 10px 0;
+}
