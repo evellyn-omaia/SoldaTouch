@@ -15,8 +15,65 @@ const MQTT_URL =
   "wss://d86f195585704b50bc165c7872060e82.s1.eu.hivemq.cloud:8884/mqtt";
 
 const MQTT_TOPICO_GESTO = "soldatech/maquina/comando";
+const MQTT_TOPICO_RESPOSTA = "soldatech/maquina/resposta";
+const MQTT_TOPICO_ERRO = "soldatech/maquina/erro";
 
 let mqttVisao = null;
+let ultimoEventoEnviado = null;
+let mesaLigadaPorGesto = false;
+
+// Resposta do Node-RED/CLP ao gesto que acabou de ser enviado.
+function tratarRespostaGesto(topico, payload) {
+  let dados;
+
+  try {
+    dados = JSON.parse(payload.toString());
+  } catch {
+    return;
+  }
+
+  if (!dados?.idEvento || dados.idEvento !== ultimoEventoEnviado) {
+    return;
+  }
+
+  if (topico === MQTT_TOPICO_ERRO) {
+    el("resultado").textContent = `Máquina não executou: ${dados.mensagem}`;
+    el("producao").textContent = "Comando recusado";
+    return;
+  }
+
+  mesaLigadaPorGesto = dados.acao === "MESA_START";
+  el("resultado").textContent = `${dados.mensagem} Confirmado pelo CLP.`;
+  el("producao").textContent = mesaLigadaPorGesto
+    ? "Mesa girando (máquina real)"
+    : "Máquina parada";
+}
+
+/*
+Segurança: se a câmera fechar (aba em segundo plano,
+tela bloqueada, sair da página) depois de um START,
+manda PAUSA. Máquina acionada por câmera não pode
+continuar girando sem a câmera olhando.
+*/
+function pararMaquinaSeCameraFechar() {
+  if (!mesaLigadaPorGesto || !mqttVisao?.connected) {
+    return;
+  }
+
+  mesaLigadaPorGesto = false;
+  ultimoEventoEnviado = crypto.randomUUID();
+  mqttVisao.publish(
+    MQTT_TOPICO_GESTO,
+    JSON.stringify({
+      tipo: "GESTO_VISAO",
+      gesto: "PAUSA",
+      origem: "CELULAR_CAMERA_FECHADA",
+      timestamp: Date.now(),
+      idEvento: ultimoEventoEnviado,
+    }),
+    { qos: 1, retain: false },
+  );
+}
 
 function conectarMQTTVisao(usuario, senha) {
   if (!window.mqtt?.connect) {
@@ -38,7 +95,10 @@ function conectarMQTTVisao(usuario, senha) {
 
   mqttVisao.on("connect", () => {
     el("conexao").textContent = "MQTT conectado";
+    mqttVisao.subscribe([MQTT_TOPICO_RESPOSTA, MQTT_TOPICO_ERRO], { qos: 0 });
   });
+
+  mqttVisao.on("message", tratarRespostaGesto);
 
   mqttVisao.on("close", () => {
     el("conexao").textContent = "MQTT desconectado";
@@ -65,6 +125,8 @@ function publicarGestoMQTT(gesto) {
     timestamp: Date.now(),
     idEvento: crypto.randomUUID(),
   };
+
+  ultimoEventoEnviado = mensagem.idEvento;
 
   return new Promise((resolve, reject) => {
     mqttVisao.publish(
@@ -140,9 +202,10 @@ const camera = new CameraGestos({
       }
       const mensagem = await publicarGestoMQTT(gesto);
 
-      el("resultado").textContent = `${mensagem.gesto} enviado ao HiveMQ.`;
+      el("resultado").textContent =
+        `${mensagem.gesto} enviado à máquina. Aguardando confirmação do CLP...`;
 
-      el("producao").textContent = "Gesto publicado · aguardando processamento";
+      el("producao").textContent = "Gesto enviado · aguardando o CLP";
     } catch (erro) {
       invalidar(erro.message);
     }
@@ -160,6 +223,7 @@ async function verificarCameras() {
 }
 
 function invalidar(mensagem) {
+  pararMaquinaSeCameraFechar();
   ++geracaoValidacao;
   sessao = null;
   contexto = null;
@@ -285,6 +349,7 @@ window.addEventListener("online", () => {
   el("revalidar").hidden = false;
 });
 window.addEventListener("pagehide", () => {
+  pararMaquinaSeCameraFechar();
   encerrada = true;
   ++geracaoValidacao;
   camera.parar();

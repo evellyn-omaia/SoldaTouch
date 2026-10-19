@@ -112,10 +112,14 @@ Node-RED**, a lógica de movimento em si (rampas de aceleração, fins de
 curso, intertravamentos de segurança) continua sendo responsabilidade do
 programa do CLP, como em qualquer máquina industrial.
 
-### 4.2. Node MQTT "SoldaTech HiveMQ" (config, clique no ícone de broker)
+### 4.2. Node MQTT "SoldaTech HiveMQ Cloud" (config, clique no ícone de broker)
 
-Preencha usuário/senha na aba **Segurança**. Veja a nota de segurança
-abaixo antes de usar as mesmas credenciais do navegador.
+Já vem apontando para o mesmo cluster que o site usa
+(`d86f195585704b50bc165c7872060e82.s1.eu.hivemq.cloud`, porta **8883**, TLS
+ligado). O usuário/senha **não** ficam no `flows.json`: preencha na aba
+**Segurança** do broker (os mesmos de `new-program/mqtt-maquina.js`) e dê
+Deploy — o Node-RED guarda criptografado em `flows_cred.json`. Veja a nota
+de segurança abaixo.
 
 ## 5. Testar sem arriscar a máquina
 
@@ -179,6 +183,30 @@ depois no de baixo e aperte **Marcar base**. A partir daí o Z exibido, o
 modelo 3D e os pontos salvos usam a posição real. Se o CLP for desligado e o
 contador zerar fora do topo (sem o passo 3 acima), basta encostar no topo e
 apertar **Marcar topo** de novo — a base é ajustada junto.
+
+## 8. Visão computacional (gestos)
+
+A página `new-program/camera.html` (celular, pelo GitHub Pages) e o
+`Visao-computacional/Visao.py` (câmera do PC) publicam gestos no HiveMQ:
+
+| Origem | Tópico | Mensagem |
+|---|---|---|
+| `camera.html` | `soldatech/maquina/comando` | `{ tipo: "GESTO_VISAO", gesto, origem, timestamp, idEvento }` |
+| `Visao.py` | `soldatech/visao/gesto` | `{ tipo: "GESTO_VISAO", gesto }` |
+
+No Node-RED:
+
+- **START** (mão aberta) → liga `%M12` (mesa girando).
+- **PAUSA** (punho fechado) → desliga `%M10`, `%M11` e `%M12` (para tudo).
+- START que chegue com mais de 15 s de atraso é **ignorado** (a mesa não
+  liga sozinha por causa de uma mensagem velha); PAUSA é sempre obedecido.
+- A resposta (`resposta`/`erro`) volta com o mesmo `idEvento`, e a página da
+  câmera mostra se o CLP confirmou ou por que não executou.
+- `REGISTRAR_GESTO` (câmera dentro da simulação 3D) só é registrado, não
+  aciona a máquina.
+
+PAUSA por gesto **não** é parada de emergência — a emergência física
+(`%I0.4`) continua sendo a garantia de segurança.
 
 ## Nota de segurança
 

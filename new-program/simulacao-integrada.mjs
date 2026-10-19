@@ -3,11 +3,6 @@ import { CameraGestos } from "./visao-camera.mjs";
 // Controles adicionais da demonstração; o programa e o desenho 3D existentes são preservados.
 if (document.getElementById("painelConexao")) {
   const panel = document.getElementById("painelConexao");
-  const physical = document.getElementById("chkMaquinaReal");
-  physical.checked = false;
-  physical.disabled = true;
-  physical.parentElement.title =
-    "Operações físicas bloqueadas nesta distribuição.";
   const section = document.createElement("section");
   section.className = "simulacao-integrada";
   section.innerHTML = `<h3>Demonstração integrada</h3>
@@ -29,7 +24,7 @@ if (document.getElementById("painelConexao")) {
     section.querySelector(".simulacao-acoes").hidden = true;
     section.querySelector("#liberarSimulacao").hidden = true;
     section.querySelector("p").textContent =
-      "Demonstração 3D pública: não depende de MQTT ou CLP.";
+      "A câmera desta tela controla só a simulação 3D. Para a máquina real use Visão Computacional.";
   }
   const el = (id) => document.getElementById(id);
   let lastSimulationState;

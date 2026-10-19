@@ -34,6 +34,29 @@ function esperarUsuarioLogado() {
 }
 
 /* ==========================
+CONTEXTO DA VISÃO COMPUTACIONAL
+(usuário logado + empresa)
+========================== */
+
+window.obterContextoVisaoFirebase = async function () {
+  let usuario;
+
+  try {
+    usuario = await esperarUsuarioLogado();
+  } catch {
+    throw new Error("Entre na sua conta para usar a câmera.");
+  }
+
+  const empresaId = sessionStorage.getItem("empresaId");
+
+  if (!empresaId) {
+    throw new Error("Empresa do usuário não identificada. Entre novamente.");
+  }
+
+  return { uid: usuario.uid, empresaId };
+};
+
+/* ==========================
 INICIAR PAUSA
 ========================== */
 

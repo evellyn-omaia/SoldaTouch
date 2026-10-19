@@ -1,96 +1,86 @@
 # Como rodar o projeto (comandos do terminal)
 
-Pra tudo funcionar (site + máquina real), são **3 coisas rodando ao
-mesmo tempo**, cada uma no seu próprio terminal (PowerShell ou
-Prompt de Comando):
+O site fica hospedado no **GitHub Pages** e conversa com a máquina pela
+nuvem (**HiveMQ Cloud**). No PC que está na mesma rede do CLP só precisa
+rodar **uma coisa**: o **Node-RED**, que é a ponte entre a nuvem e o CLP.
 
-1. **Broker MQTT local** — o "correio" entre o navegador e o Node-RED.
-2. **Node-RED** — a ponte que fala Modbus TCP com o CLP.
-3. **Servidor do site** — serve os arquivos HTML/CSS/JS pro navegador.
+```
+Celular / PC (site no GitHub Pages)
+        │  MQTT seguro (wss)
+        ▼
+HiveMQ Cloud
+        │  MQTT seguro (mqtts)
+        ▼
+Node-RED (este PC, na rede do CLP)
+        │  Modbus TCP
+        ▼
+CLP M221  →  motores / mesa
+```
 
-Se qualquer um dos três não estiver rodando, alguma parte para de
-funcionar: sem o broker ou o Node-RED, o site abre normalmente mas a
-máquina real não responde; sem o servidor do site, nem a página abre.
-
-Abra **3 janelas de terminal** (uma pra cada) e rode um comando em
-cada uma. Deixe as 3 abertas — fechar a janela derruba aquele serviço.
+Precisa de **internet** neste PC (pro Node-RED alcançar o HiveMQ) e
+**rede local com o CLP**.
 
 ---
 
-## Terminal 1 — Broker MQTT
+## Terminal — Node-RED
 
 ```
-cd C:\Users\Aluno\Documents\SoldaAuto\mqtt-broker
-node server.js
+node-red -p 1882
 ```
 
-Sinal de que deu certo:
+(Não precisa `cd` — o flow e a senha do HiveMQ já ficam guardados na
+pasta de usuário do Node-RED, `%USERPROFILE%\.node-red`. A porta 1882
+é só a do editor; usamos 1882 porque neste PC a 1880 está ocupada por
+outro usuário do Windows. Se ela estiver livre, `node-red` também serve.)
+
+Deixe a janela aberta — fechar derruba a ponte com a máquina.
+
+Sinal de que deu certo (uns 15-20 segundos):
 
 ```
-[MQTT TCP] ouvindo em mqtt://localhost:1883 (uso: Node-RED)
-[MQTT WS]  ouvindo em ws://localhost:8888 (uso: navegador)
+Server now running at http://127.0.0.1:1882/
+[mqtt-broker:SoldaTech HiveMQ Cloud] Connected to broker: mqtts://...hivemq.cloud:8883
+[function:Conectar ao CLP (on start) - AJUSTAR] Conectado ao CLP via Modbus TCP em 10.200.7.154:502
 ```
 
-## Terminal 2 — Node-RED
+Se aparecer "Falha ao conectar ao CLP", o CLP não está na rede (desligado,
+cabo, ou IP diferente de `10.200.7.154`). Não precisa reiniciar nada: o
+Node-RED tenta de novo a cada 3 segundos e conecta sozinho quando o CLP
+aparecer.
+
+---
+
+## Usar
+
+- **Site**: o link do GitHub Pages do repositório (pasta raiz → `index.html`).
+- **Controle por gestos (câmera)**: entre na conta → **Iniciar Produção** →
+  escolha o programa e a quantidade → **Controlar por gestos (câmera)** →
+  **Ativar câmera**.
+  - **Mão aberta** (START): gira a mesa.
+  - **Punho fechado** (PAUSA): para a mesa e o eixo Z.
+  - Se a câmera fechar (sair da página, bloquear a tela), a máquina para.
+  - A página mostra quando o CLP **confirmou** o gesto, ou o motivo de não
+    ter executado (ex.: CLP desligado).
+- **Novo Programa**: jog, salvar pontos e encoder, como antes (marque
+  "Controlar a máquina real").
+
+## Para parar
+
+Clique na janela do Node-RED e aperte `Ctrl+C`.
+
+## Rodar o site localmente (opcional)
+
+Só se quiser testar mudanças antes de subir pro GitHub:
 
 ```
-node-red
-```
-
-(Não precisa `cd` em lugar nenhum — o Node-RED já guarda o flow
-importado na pasta de usuário dele, `%USERPROFILE%\.node-red`.)
-
-Sinal de que deu certo (demora uns 15-20 segundos pra aparecer):
-
-```
-Server now running at http://127.0.0.1:1880/
-Started flows
-[mqtt-broker:SoldaTech Local] Connected to broker: ...
-[function:Conectar ao CLP (on start) - AJUSTAR] Conectado ao CLP via Modbus TCP em 10.200.7.254:502
-```
-
-Se a última linha não aparecer ou disser erro de conexão, o CLP não
-foi encontrado na rede — confira se o PC está na mesma rede do CLP e
-se o IP/porta em `node-red/flows.json` ainda são `10.200.7.254:502`.
-
-## Terminal 3 — Servidor do site
-
-```
-cd C:\Users\Aluno\Documents\SoldaAuto
+cd C:\Users\Aluno\Documents\SoldaTouch
 python -m http.server 5500
 ```
 
-Sinal de que deu certo: a janela fica "parada" mostrando as
-requisições conforme o navegador acessa (não precisa aparecer nada
-antes disso, só não fechar a janela).
-
----
-
-## Abrir o site
-
-- **Neste PC**: `http://localhost:5500/index.html`
-- **Novo Programa direto**: `http://localhost:5500/new-program/novoprograma.html`
-- **Em outro aparelho na mesma rede (ex.: celular)**: troque
-  `localhost` pelo IP deste PC na rede, por exemplo
-  `http://10.200.6.254:5500/index.html`
-
-Pra descobrir o IP deste PC na rede, rode num dos terminais:
-
-```
-ipconfig
-```
-
-e procure a linha `Endereço IPv4` da rede que estiver conectada
-(Wi-Fi ou Ethernet).
-
-## Para parar tudo
-
-Clique em cada uma das 3 janelas de terminal e aperte `Ctrl+C`.
+e abra `http://localhost:5500/index.html`. (No celular a câmera só
+funciona por HTTPS, então pelo celular use o link do GitHub Pages.)
 
 ## Se for rodar pela primeira vez num PC novo
 
-As 3 dependências já vêm prontas neste repositório
-(`mqtt-broker/node_modules`), exceto o Node-RED em si e o pacote
-Modbus dele, que são instalados **no próprio PC**, não no projeto —
-siga o passo a passo em `node-red/README.md` antes de tentar o
-Terminal 2 pela primeira vez.
+Siga o `node-red/README.md` (instalar o Node-RED, o pacote Modbus e
+colocar usuário/senha do HiveMQ na configuração do broker no editor).

@@ -1,3 +1,9 @@
+import {
+  CAMERA_URL,
+  CHAVE_SESSAO,
+  criarSessao,
+} from "../new-program/visao-core.mjs";
+
 const selectPrograma = document.getElementById("selectPrograma");
 const quantidade = document.getElementById("quantidade");
 const tipoMaterial = document.getElementById("tipoMaterial");
@@ -788,6 +794,45 @@ document.getElementById("btnLimpar").addEventListener("click", limparFila);
 document
   .getElementById("btnIniciar")
   .addEventListener("click", iniciarProducao);
+
+/*
+Abre a Visão Computacional com a produção configurada:
+usa a fila (ou, se vazia, o programa selecionado) e grava
+a sessão que a página da câmera valida antes de ligar.
+*/
+async function abrirVisaoComputacional() {
+  try {
+    if (typeof window.obterContextoVisaoFirebase !== "function") {
+      throw new Error("O Firebase ainda está carregando. Tente de novo.");
+    }
+
+    const contexto = await window.obterContextoVisaoFirebase();
+    const selecao = fila.length
+      ? {}
+      : {
+          programa: selectPrograma.value,
+          quantidade: Number(quantidade.value),
+          tipoMaterial: tipoMaterial.value,
+          materialSolda: materialSolda.value,
+        };
+
+    const sessao = criarSessao({
+      contexto,
+      programas: programasDisponiveis,
+      fila,
+      selecao,
+    });
+
+    sessionStorage.setItem(CHAVE_SESSAO, JSON.stringify(sessao));
+    window.location.href = CAMERA_URL;
+  } catch (erro) {
+    alert(erro?.message || String(erro));
+  }
+}
+
+document
+  .getElementById("btnVisao")
+  .addEventListener("click", abrirVisaoComputacional);
 
 document.getElementById("btnVoltar").addEventListener("click", () => {
   window.location.href = "../solda-system/index.html";
