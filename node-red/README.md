@@ -117,7 +117,7 @@ programa do CLP, como em qualquer máquina industrial.
 Já vem apontando para o mesmo cluster que o site usa
 (`d86f195585704b50bc165c7872060e82.s1.eu.hivemq.cloud`, porta **8883**, TLS
 ligado). O usuário/senha **não** ficam no `flows.json`: preencha na aba
-**Segurança** do broker (os mesmos de `new-program/mqtt-maquina.js`) e dê
+**Segurança** do broker (os mesmos de `src/config/mqtt.js`) e dê
 Deploy — o Node-RED guarda criptografado em `flows_cred.json`. Veja a nota
 de segurança abaixo.
 
@@ -211,7 +211,7 @@ PAUSA por gesto **não** é parada de emergência — a emergência física
 ## Nota de segurança
 
 Hoje o broker HiveMQ do app usa uma credencial fixa, visível em texto puro
-no código do navegador (`new-program/mqtt-maquina.js`). Qualquer pessoa que
+no código do navegador (`src/config/mqtt.js`). Qualquer pessoa que
 abrir o DevTools do navegador consegue ler usuário/senha e, em tese, publicar
 mensagens em `soldatech/maquina/status` fingindo ser o CLP, ou mandar
 comandos direto para o tópico de comando. Antes de ligar isso em uma máquina

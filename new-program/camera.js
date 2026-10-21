@@ -5,17 +5,16 @@ import {
   validarItens,
 } from "./visao-core.mjs";
 import { CameraGestos } from "./visao-camera.mjs";
+import { MQTT_CONFIG } from "../src/config/mqtt.js";
 
 // ==========================================
 // MQTT - VISAO COMPUTACIONAL DO CELULAR
 // ==========================================
 
-const MQTT_URL =
-  "wss://d86f195585704b50bc165c7872060e82.s1.eu.hivemq.cloud:8884/mqtt";
-
-const MQTT_TOPICO_GESTO = "soldatech/maquina/comando";
-const MQTT_TOPICO_RESPOSTA = "soldatech/maquina/resposta";
-const MQTT_TOPICO_ERRO = "soldatech/maquina/erro";
+const MQTT_URL = MQTT_CONFIG.brokerUrl;
+const MQTT_TOPICO_GESTO = MQTT_CONFIG.topicos.comando;
+const MQTT_TOPICO_RESPOSTA = MQTT_CONFIG.topicos.resposta;
+const MQTT_TOPICO_ERRO = MQTT_CONFIG.topicos.erro;
 
 let mqttVisao = null;
 let ultimoEventoEnviado = null;
@@ -140,7 +139,10 @@ function publicarGestoMQTT(gesto) {
   });
 }
 
-conectarMQTTVisao("SoldaTouch", "MQtesteVisao");
+conectarMQTTVisao(
+  MQTT_CONFIG.credenciais.usuario,
+  MQTT_CONFIG.credenciais.senha,
+);
 
 const el = (id) => document.getElementById(id);
 let sessao, contexto, identidade, pararObservacao, expiracao;

@@ -1,4 +1,4 @@
-import { auth, db } from "../solda-login/firebase.js";
+import { auth, db } from "../src/services/firebase/client.js";
 import {
   get,
   onValue,

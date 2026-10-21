@@ -1,3 +1,12 @@
+import { MQTT_CONFIG } from "../src/config/mqtt.js";
+import { criarIntegracaoFisica } from "../src/services/machine/integration.js";
+import {
+  normalizarTipoMensagem,
+  obterCategoriaTopico,
+  parsearMensagemMqtt,
+  validarCamposMinimos,
+} from "../src/services/mqtt/protocol.js";
+
 /*
 =====================================
 MQTT - SOLDATECH
@@ -5,22 +14,17 @@ MQTT - SOLDATECH
 */
 
 // Broker HiveMQ Cloud compartilhado pelo navegador e pelo Node-RED.
-const MQTT_BROKER =
-  "wss://d86f195585704b50bc165c7872060e82.s1.eu.hivemq.cloud:8884/mqtt";
-
-const MQTT_TOPICO_COMANDO = "soldatech/maquina/comando";
-
-const MQTT_TOPICO_STATUS = "soldatech/maquina/status";
-
-const MQTT_TOPICO_RESPOSTA = "soldatech/maquina/resposta";
-
-const MQTT_TOPICO_ERRO = "soldatech/maquina/erro";
+const MQTT_BROKER = MQTT_CONFIG.brokerUrl;
+const MQTT_TOPICO_COMANDO = MQTT_CONFIG.topicos.comando;
+const MQTT_TOPICO_STATUS = MQTT_CONFIG.topicos.status;
+const MQTT_TOPICO_RESPOSTA = MQTT_CONFIG.topicos.resposta;
+const MQTT_TOPICO_ERRO = MQTT_CONFIG.topicos.erro;
 
 let mqttCliente = null;
 let mqttConectado = false;
-const CLP_TIMEOUT_MS = 10000;
-const MQTT_COMMAND_TIMEOUT_MS = 8000;
-const INTERVALO_ATUALIZACAO_STATUS_MS = 1000;
+const CLP_TIMEOUT_MS = MQTT_CONFIG.clpTimeoutMs;
+const MQTT_COMMAND_TIMEOUT_MS = MQTT_CONFIG.comandoTimeoutMs;
+const INTERVALO_ATUALIZACAO_STATUS_MS = MQTT_CONFIG.intervaloStatusMs;
 let ultimoContatoClp = null;
 let ultimaMensagemClp = null;
 let ultimoEstadoDeclaradoClp = null;
@@ -215,119 +219,6 @@ function registrarContatoClp(topico, mensagemProcessada) {
   };
 
   atualizarStatusConexao();
-}
-
-function converterPayloadParaTexto(payload) {
-  if (typeof payload === "string") {
-    return payload;
-  }
-
-  try {
-    return payload?.toString?.() ?? "";
-  } catch {
-    return "";
-  }
-}
-
-function parsearMensagemMqtt(payload) {
-  const texto = converterPayloadParaTexto(payload).trim();
-
-  if (!texto) {
-    return {
-      valido: false,
-      formato: "vazio",
-      texto: "",
-      dados: null,
-      erro: "Payload vazio",
-    };
-  }
-
-  try {
-    const dados = JSON.parse(texto);
-    const objetoValido =
-      dados !== null && typeof dados === "object" && !Array.isArray(dados);
-
-    return {
-      valido: objetoValido,
-      formato: "json",
-      texto,
-      dados: objetoValido ? dados : null,
-      erro: objetoValido ? null : "O JSON precisa ser um objeto",
-    };
-  } catch (erro) {
-    return {
-      valido: true,
-      formato: "texto",
-      texto,
-      dados: {
-        mensagem: texto,
-        legado: true,
-      },
-      erroParse: erro.message,
-    };
-  }
-}
-
-function normalizarTipoMensagem(dados, categoria) {
-  const tipoRecebido = dados?.tipo ?? dados?.evento;
-
-  if (typeof tipoRecebido === "string" && tipoRecebido.trim()) {
-    return tipoRecebido.trim().toUpperCase();
-  }
-
-  if (categoria === "STATUS") {
-    return "STATUS";
-  }
-
-  if (categoria === "ERRO") {
-    return "ERRO";
-  }
-
-  return null;
-}
-
-function obterCategoriaTopico(topico) {
-  if (topico === MQTT_TOPICO_STATUS) {
-    return "STATUS";
-  }
-
-  if (topico === MQTT_TOPICO_RESPOSTA) {
-    return "RESPOSTA";
-  }
-
-  if (topico === MQTT_TOPICO_ERRO) {
-    return "ERRO";
-  }
-
-  return null;
-}
-
-function validarCamposMinimos(categoria, mensagemProcessada) {
-  if (mensagemProcessada.formato === "texto") {
-    return null;
-  }
-
-  const dados = mensagemProcessada.dados;
-
-  if (categoria === "STATUS") {
-    return Object.keys(dados).length > 0
-      ? null
-      : "Mensagem de status sem campos";
-  }
-
-  if (categoria === "RESPOSTA") {
-    return typeof (dados.tipo ?? dados.evento) === "string"
-      ? null
-      : "Resposta sem campo tipo/evento";
-  }
-
-  if (categoria === "ERRO") {
-    return dados.tipo || dados.mensagem || dados.codigo
-      ? null
-      : "Mensagem de erro sem tipo, mensagem ou código";
-  }
-
-  return null;
 }
 
 function criarErroComando(mensagem, dados = {}) {
@@ -541,8 +432,8 @@ function conectarMQTT() {
 
   mqttCliente = window.mqtt.connect(MQTT_BROKER, {
     clientId: clientId,
-    username: "SoldaTouch",
-    password: "MQtesteVisao",
+    username: MQTT_CONFIG.credenciais.usuario,
+    password: MQTT_CONFIG.credenciais.senha,
     clean: true,
     reconnectPeriod: 3000,
     connectTimeout: 10000,
@@ -810,88 +701,7 @@ window.enviarComandoMaquina = async function (comando, dados = {}) {
 window.enviarComandoComConfirmacao = enviarComandoComConfirmacao;
 window.aguardarEventoMaquina = aguardarEventoMaquina;
 
-const adaptadoresIntegracaoFutura = {
-  movimentoManual: null,
-  soldagem: null,
-};
-
-window.SoldaTouchIntegracaoFisica = Object.freeze({
-  registrarMovimentoManual(adaptador) {
-    if (
-      !adaptador ||
-      typeof adaptador.iniciar !== "function" ||
-      typeof adaptador.parar !== "function"
-    ) {
-      throw new TypeError(
-        "O adaptador de movimento manual deve fornecer iniciar(direcao) e parar().",
-      );
-    }
-
-    adaptadoresIntegracaoFutura.movimentoManual = adaptador;
-    return () => {
-      if (adaptadoresIntegracaoFutura.movimentoManual === adaptador) {
-        adaptadoresIntegracaoFutura.movimentoManual = null;
-      }
-    };
-  },
-
-  registrarSoldagem(adaptador) {
-    if (!adaptador || typeof adaptador.definirAtiva !== "function") {
-      throw new TypeError(
-        "O adaptador de soldagem deve fornecer definirAtiva(ativa, contexto).",
-      );
-    }
-
-    adaptadoresIntegracaoFutura.soldagem = adaptador;
-    return () => {
-      if (adaptadoresIntegracaoFutura.soldagem === adaptador) {
-        adaptadoresIntegracaoFutura.soldagem = null;
-      }
-    };
-  },
-
-  iniciarMovimentoManual(direcao) {
-    const direcaoNormalizada = String(direcao || "").toUpperCase();
-
-    if (!["CIMA", "BAIXO"].includes(direcaoNormalizada)) {
-      throw new TypeError("A direção deve ser CIMA ou BAIXO.");
-    }
-
-    if (!adaptadoresIntegracaoFutura.movimentoManual) {
-      return false;
-    }
-
-    return adaptadoresIntegracaoFutura.movimentoManual.iniciar(
-      direcaoNormalizada,
-    );
-  },
-
-  pararMovimentoManual() {
-    if (!adaptadoresIntegracaoFutura.movimentoManual) {
-      return false;
-    }
-
-    return adaptadoresIntegracaoFutura.movimentoManual.parar();
-  },
-
-  definirSoldagemAtiva(ativa, contexto = {}) {
-    if (!adaptadoresIntegracaoFutura.soldagem) {
-      return false;
-    }
-
-    return adaptadoresIntegracaoFutura.soldagem.definirAtiva(
-      Boolean(ativa),
-      contexto,
-    );
-  },
-
-  obterCapacidades() {
-    return {
-      movimentoManual: Boolean(adaptadoresIntegracaoFutura.movimentoManual),
-      soldagem: Boolean(adaptadoresIntegracaoFutura.soldagem),
-    };
-  },
-});
+window.SoldaTouchIntegracaoFisica = criarIntegracaoFisica();
 
 /*
 =====================================
