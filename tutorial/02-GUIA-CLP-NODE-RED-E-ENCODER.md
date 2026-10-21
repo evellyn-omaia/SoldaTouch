@@ -116,10 +116,12 @@ Dois detalhes importantes desse desenho, pra manter no futuro:
   toque moveria uma quantidade diferente (o tempo de um clique humano
   varia). Por isso o pulso tem uma duração **fixa, controlada pelo
   Node-RED**, não pelo navegador.
-- **`MOVER_PONTO`** hoje só escreve um registrador com a posição alvo
-  — mas **nada no CLP lê esse registrador ainda**. É só uma "gaveta"
-  preparada pro futuro. Isso é o que precisa mudar quando o encoder
-  chegar (próxima seção).
+- **`MOVER_PONTO`** escreve a posição Z alvo em `%MW0` e o ângulo da mesa
+  em `%MW1`. O Node-RED responde `PONTO_RECEBIDO` após essas escritas e
+  `PONTO_ATINGIDO` somente quando o encoder Z calibrado chega à tolerância.
+  O movimento físico ainda depende do ladder ler `%MW0`, acionar o motor
+  com seus intertravamentos e pará-lo no alvo; gravar o registrador sozinho
+  não movimenta o eixo.
 
 ## Parte 5 — Quando o encoder chegar: o que fazer
 

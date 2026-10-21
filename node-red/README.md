@@ -146,7 +146,12 @@ mudar para "CONECTADO" no painel do app), abra a tela de produção
 - Ligar a solda envia `SOLDA_ON`/`SOLDA_OFF`.
 - Girar a mesa envia `MESA_START`/`MESA_STOP`.
 - A execução automática de um programa envia `MOVER_PONTO` para cada ponto
-  e espera a confirmação `PONTO_ATINGIDO` do CLP (via este flow).
+  e espera a confirmação `PONTO_ATINGIDO` do CLP (via este flow). O flow
+  publica `PONTO_RECEBIDO` depois de gravar os alvos `%MW0`/`%MW1` e só
+  publica `PONTO_ATINGIDO` quando o encoder Z calibrado confirma a posição.
+  Se aparecer apenas `PONTO_RECEBIDO`, confira se o ladder realmente usa
+  `%MW0` para mover o eixo; o Node-RED não substitui a malha de movimento e
+  os intertravamentos que devem existir no CLP.
 - A posição do modelo 3D deixa de ser assumida e passa a refletir a posição
   **real** informada pelo CLP (mensagens `STATUS`).
 

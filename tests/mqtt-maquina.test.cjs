@@ -125,6 +125,16 @@ test("camada MQTT preserva estados e correlaciona comandos", async () => {
     api.topicos.resposta,
     JSON.stringify({
       idComando: comandoPonto.idComando,
+      tipo: "PONTO_RECEBIDO",
+      ponto: 1,
+    }),
+  );
+  assert.equal(janela.obterEstadoConexaoMaquina().comandosPendentes, 1);
+
+  api.processarMensagemMaquina(
+    api.topicos.resposta,
+    JSON.stringify({
+      idComando: comandoPonto.idComando,
       tipo: "PONTO_ATINGIDO",
     }),
   );

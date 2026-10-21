@@ -1250,6 +1250,16 @@ function atualizarLeituraEncoderZ(dados) {
 }
 
 window.SoldaTouchMQTT?.eventos.addEventListener("tipo-evento", (evento) => {
+  if (evento.detail?.tipo === "PONTO_RECEBIDO" && maquinaRealAtiva()) {
+    const statusPrograma = document.getElementById("statusPrograma");
+
+    if (statusPrograma) {
+      statusPrograma.innerText = `P${evento.detail.dados?.ponto || indicePontoAtual + 1} recebido pelo CLP. Aguardando atingir a posição...`;
+    }
+
+    return;
+  }
+
   if (evento.detail?.tipo !== "STATUS") {
     return;
   }
@@ -1270,15 +1280,7 @@ window.SoldaTouchMQTT?.eventos.addEventListener("tipo-evento", (evento) => {
   ) {
     ultimaPosicaoEncoderEm = Date.now();
 
-    /*
-    A reprodução de programa ainda roda só na
-    simulação (a máquina real não vai sozinha até
-    o ponto) - não deixa a leitura real brigar com
-    a animação enquanto o programa executa.
-    */
-    if (!executandoPrograma) {
-      aplicarPosicaoZReal(dados.posicaoZMm);
-    }
+    aplicarPosicaoZReal(dados.posicaoZMm);
   }
 
   if (dados.anguloMesaGraus !== undefined && mesaReal) {
@@ -1328,6 +1330,7 @@ let inicioExecucao = Date.now();
 let inicioProducao = null;
 let fimProducao = null;
 let indiceUltimoPontoEnviadoMaquina = -1;
+let movimentoPontoMaquinaEmAndamento = false;
 
 function salvarPonto() {
   if (executandoPrograma) {
@@ -1681,6 +1684,13 @@ function alternarMovimentoReproducaoSimples() {
     pararControleManual();
     atualizarStatusMesa("PARADA");
 
+    if (maquinaRealAtiva()) {
+      void Promise.allSettled([
+        solicitarComandoMaquina("JOG_PARAR"),
+        solicitarComandoMaquina("MESA_STOP"),
+      ]);
+    }
+
     if (botao) {
       botao.innerText = "Continuar execução";
     }
@@ -1691,6 +1701,7 @@ function alternarMovimentoReproducaoSimples() {
   } else {
     programaPausado = false;
     estadoExecucao = EstadoExecucao.EXECUTANDO;
+    indiceUltimoPontoEnviadoMaquina = -1;
 
     if (botao) {
       botao.innerText = "Pausar execução";
@@ -2152,8 +2163,12 @@ saber qual tecnologia está em uso.
 */
 
 async function solicitarComandoMaquina(comando, dados = {}, opcoes = {}) {
+  if (!maquinaRealAtiva()) {
+    console.log("[SIMULAÇÃO] comando da máquina:", comando, dados);
+    return true;
+  }
+
   const deveAguardarConfirmacao =
-    modoIntegracaoMaquina === ModoIntegracaoMaquina.CLP_CONFIRMADO &&
     opcoes.aguardarConfirmacao === true;
 
   if (deveAguardarConfirmacao) {
@@ -2171,9 +2186,7 @@ async function solicitarComandoMaquina(comando, dados = {}, opcoes = {}) {
     return await window.enviarComandoMaquina(comando, dados);
   }
 
-  console.log("[SIMULAÇÃO] comando da máquina:", comando, dados);
-
-  return true;
+  throw new Error("Camada MQTT não disponível para controlar a máquina real.");
 }
 
 async function pararMesaAutomatica() {
@@ -2594,10 +2607,12 @@ async function enviarPontoParaMaquina(ponto, indice) {
       ponto: indice + 1,
       zMm: Number(zMm.toFixed(2)),
       anguloMesaGraus: Number(anguloMesaGraus.toFixed(2)),
+      toleranciaZMm: TOLERANCIA_Z_MM,
     },
     {
       aguardarConfirmacao: true,
       tiposSucesso: ["PONTO_ATINGIDO"],
+      timeoutMs: 20_000,
     },
   );
 
@@ -2608,6 +2623,83 @@ async function enviarPontoParaMaquina(ponto, indice) {
   }
 
   return true;
+}
+
+async function executarPontoNaMaquinaReal(ponto, indice) {
+  movimentoPontoMaquinaEmAndamento = true;
+
+  const statusPrograma = document.getElementById("statusPrograma");
+  const execucaoAtual = document.getElementById("execucaoAtual");
+
+  if (statusPrograma) {
+    statusPrograma.innerText = `Enviando P${indice + 1} ao CLP...`;
+  }
+
+  if (execucaoAtual) {
+    execucaoAtual.innerText = `P${indice + 1}/${pontos.length} | aguardando confirmação do CLP`;
+  }
+
+  try {
+    await enviarPontoParaMaquina(ponto, indice);
+
+    const execucaoAindaValida =
+      maquinaRealAtiva() &&
+      executandoPrograma &&
+      !programaPausado &&
+      estadoExecucao === EstadoExecucao.EXECUTANDO &&
+      indicePontoAtual === indice;
+
+    if (!execucaoAindaValida) {
+      return;
+    }
+
+    const destinoZ = Number(ponto.zMm);
+    const anguloDestino = Number(ponto.anguloMesaGraus) || 0;
+
+    definirPosicaoZMm(destinoZ);
+    definirAnguloMesaGraus(anguloDestino);
+
+    if (ponto.solda?.ativar) {
+      definirIndutorSoldando(true);
+      encerrarSoldaNoProximoQuadro = true;
+    }
+
+    indicePontoAtual += 1;
+    atualizarIndicadorPosicao();
+
+    if (indicePontoAtual >= pontos.length) {
+      if (modoReproducaoSimples) {
+        finalizarOuReiniciarReproducaoSimples();
+      } else {
+        void concluirProgramaAtual();
+      }
+    } else if (statusPrograma) {
+      statusPrograma.innerText = `P${indice + 1} confirmado. Preparando P${indicePontoAtual + 1}...`;
+    }
+  } catch (erro) {
+    console.error(`Falha ao executar P${indice + 1} no CLP:`, erro);
+
+    if (indicePontoAtual === indice) {
+      programaPausado = true;
+      estadoExecucao = EstadoExecucao.PAUSADO;
+      girando = false;
+      indiceUltimoPontoEnviadoMaquina = -1;
+      definirIndutorSoldando(false);
+      atualizarStatusMesa("PARADA");
+
+      if (statusPrograma) {
+        statusPrograma.innerText = `P${indice + 1} não foi confirmado pelo CLP: ${erro?.message || erro}`;
+      }
+
+      const botaoPausa = document.getElementById("btnPlayPause");
+      if (botaoPausa) {
+        botaoPausa.disabled = false;
+        botaoPausa.innerText = "Tentar novamente";
+      }
+    }
+  } finally {
+    movimentoPontoMaquinaEmAndamento = false;
+  }
 }
 
 function animate() {
@@ -2717,20 +2809,17 @@ function animate() {
         void concluirProgramaAtual();
       }
     } else {
-      /*
-      ==========================
-      ENVIO DO PONTO
-      ==========================
+      if (maquinaRealAtiva()) {
+        if (
+          !movimentoPontoMaquinaEmAndamento &&
+          indiceUltimoPontoEnviadoMaquina !== indicePontoAtual
+        ) {
+          indiceUltimoPontoEnviadoMaquina = indicePontoAtual;
+          void executarPontoNaMaquinaReal(pontoAtual, indicePontoAtual);
+        }
 
-      O ponto é enviado somente
-      uma vez enquanto estivermos
-      trabalhando nele.
-      */
-
-      if (indiceUltimoPontoEnviadoMaquina !== indicePontoAtual) {
-        indiceUltimoPontoEnviadoMaquina = indicePontoAtual;
-
-        void enviarPontoParaMaquina(pontoAtual, indicePontoAtual);
+        renderer.render(scene, camera);
+        return;
       }
 
       /*
@@ -3375,6 +3464,22 @@ async function iniciarReproducaoSimples() {
   if (!mesaReal) {
     alert("A mesa giratória ainda não foi carregada.");
     return;
+  }
+
+  if (maquinaRealAtiva()) {
+    const estadoConexao = window.obterEstadoConexaoMaquina?.();
+
+    if (!estadoConexao?.mqttConectado) {
+      alert("MQTT desconectado. Não é possível iniciar a máquina real.");
+      return;
+    }
+
+    if (estadoConexao.clp !== "CONECTADO") {
+      alert(
+        `CLP não está pronto (${estadoConexao.clp || "sem estado"}). Aguarde uma resposta válida antes de iniciar.`,
+      );
+      return;
+    }
   }
 
   const modo = await escolherModoReproducao();
