@@ -13,17 +13,17 @@ coisa realmente vive, caso precise abrir e olhar.
 Pense em 4 "estações" que precisam conversar entre si:
 
 ```
-[Navegador]  <--MQTT-->  [Broker MQTT local]  <--MQTT-->  [Node-RED]  <--Modbus TCP-->  [CLP real]
- (o app 3D)                (mqtt-broker/)                (node-red/)                  (motores de verdade)
+[Navegador]  <--MQTT seguro-->  [HiveMQ Cloud]  <--MQTT seguro-->  [Node-RED]  <--Modbus TCP-->  [CLP real]
+ (o app 3D)                  (broker MQTT)                    (node-red/)                  (motores de verdade)
 ```
 
 - **Navegador**: onde você vê o modelo 3D e aperta os botões. Ele
   nunca fala direto com o CLP — só publica "comandos" (tipo "quero
   subir") e escuta "respostas"/"status" via MQTT.
-- **Broker MQTT local**: um "correio" que só entrega mensagens entre
-  quem está inscrito nos mesmos assuntos (tópicos). Não entende nada
-  de solda ou CLP, só repassa mensagens. Fica no arquivo
-  `mqtt-broker/server.js`.
+- **HiveMQ Cloud**: o "correio" MQTT que entrega mensagens entre quem está
+  inscrito nos mesmos assuntos (tópicos). O navegador e o Node-RED usam o
+  mesmo cluster com conexões TLS; credenciais e ACLs devem ser configuradas
+  conforme `node-red/README.md`.
 - **Node-RED**: é o "tradutor". Ele escuta os comandos que chegam do
   navegador via MQTT, e os transforma em leitura/escrita Modbus TCP no
   CLP (que é a língua que o CLP fala). E faz o caminho inverso também:
@@ -116,10 +116,12 @@ Dois detalhes importantes desse desenho, pra manter no futuro:
   toque moveria uma quantidade diferente (o tempo de um clique humano
   varia). Por isso o pulso tem uma duração **fixa, controlada pelo
   Node-RED**, não pelo navegador.
-- **`MOVER_PONTO`** hoje só escreve um registrador com a posição alvo
-  — mas **nada no CLP lê esse registrador ainda**. É só uma "gaveta"
-  preparada pro futuro. Isso é o que precisa mudar quando o encoder
-  chegar (próxima seção).
+- **`MOVER_PONTO`** escreve a posição Z alvo em `%MW0` e o ângulo da mesa
+  em `%MW1`. O Node-RED responde `PONTO_RECEBIDO` após essas escritas e
+  `PONTO_ATINGIDO` somente quando o encoder Z calibrado chega à tolerância.
+  O movimento físico ainda depende do ladder ler `%MW0`, acionar o motor
+  com seus intertravamentos e pará-lo no alvo; gravar o registrador sozinho
+  não movimenta o eixo.
 
 ## Parte 5 — Quando o encoder chegar: o que fazer
 

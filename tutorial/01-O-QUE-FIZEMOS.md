@@ -19,12 +19,9 @@ uma simulação pura — nada se comunicava com uma máquina de verdade.
 
 O que foi construído:
 
-- Um **broker MQTT local** (pasta `mqtt-broker/`), rodando no mesmo PC
-  do Node-RED, sem depender de nenhum serviço de nuvem. Antes disso o
-  projeto usava um broker na nuvem (HiveMQ) com uma senha exposta em
-  texto puro no código do navegador — o broker local resolve isso e
-  também tira a dependência de internet para o CLP e o navegador se
-  falarem, já que os dois estão na mesma rede.
+- Um **broker MQTT no HiveMQ Cloud**, compartilhado pelo navegador e pelo
+  Node-RED. Essa é a arquitetura usada pelo site no GitHub Pages; as
+  credenciais e ACLs precisam ser configuradas conforme o guia do Node-RED.
 - Um **flow do Node-RED** (pasta `node-red/`) que faz a ponte: assina
   os comandos que o navegador publica via MQTT, traduz pra escrita
   Modbus TCP no CLP, e publica de volta o status/confirmação/erro nos

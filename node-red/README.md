@@ -12,7 +12,7 @@ Navegador (novoprograma.js)
       │  MQTT (wss://.../mqtt)
       ▼
 Broker MQTT (HiveMQ Cloud)
-      │  MQTT (mqtts://.../1883 ou 8883)
+      │  MQTT seguro (mqtts://...:8883)
       ▼
 Node-RED (este flow)
       │  Modbus TCP
@@ -117,7 +117,7 @@ programa do CLP, como em qualquer máquina industrial.
 Já vem apontando para o mesmo cluster que o site usa
 (`d86f195585704b50bc165c7872060e82.s1.eu.hivemq.cloud`, porta **8883**, TLS
 ligado). O usuário/senha **não** ficam no `flows.json`: preencha na aba
-**Segurança** do broker (os mesmos de `new-program/mqtt-maquina.js`) e dê
+**Segurança** do broker (os mesmos de `src/config/mqtt.js`) e dê
 Deploy — o Node-RED guarda criptografado em `flows_cred.json`. Veja a nota
 de segurança abaixo.
 
@@ -146,7 +146,12 @@ mudar para "CONECTADO" no painel do app), abra a tela de produção
 - Ligar a solda envia `SOLDA_ON`/`SOLDA_OFF`.
 - Girar a mesa envia `MESA_START`/`MESA_STOP`.
 - A execução automática de um programa envia `MOVER_PONTO` para cada ponto
-  e espera a confirmação `PONTO_ATINGIDO` do CLP (via este flow).
+  e espera a confirmação `PONTO_ATINGIDO` do CLP (via este flow). O flow
+  publica `PONTO_RECEBIDO` depois de gravar os alvos `%MW0`/`%MW1` e só
+  publica `PONTO_ATINGIDO` quando o encoder Z calibrado confirma a posição.
+  Se aparecer apenas `PONTO_RECEBIDO`, confira se o ladder realmente usa
+  `%MW0` para mover o eixo; o Node-RED não substitui a malha de movimento e
+  os intertravamentos que devem existir no CLP.
 - A posição do modelo 3D deixa de ser assumida e passa a refletir a posição
   **real** informada pelo CLP (mensagens `STATUS`).
 
@@ -211,7 +216,7 @@ PAUSA por gesto **não** é parada de emergência — a emergência física
 ## Nota de segurança
 
 Hoje o broker HiveMQ do app usa uma credencial fixa, visível em texto puro
-no código do navegador (`new-program/mqtt-maquina.js`). Qualquer pessoa que
+no código do navegador (`src/config/mqtt.js`). Qualquer pessoa que
 abrir o DevTools do navegador consegue ler usuário/senha e, em tese, publicar
 mensagens em `soldatech/maquina/status` fingindo ser o CLP, ou mandar
 comandos direto para o tópico de comando. Antes de ligar isso em uma máquina

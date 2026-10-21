@@ -1,7 +1,7 @@
 import {
   authOperadores,
   db
-} from "../solda-login/firebase.js";
+} from "../src/services/firebase/client.js";
 import {
   createUserWithEmailAndPassword,
   signOut

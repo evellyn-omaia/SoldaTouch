@@ -1,9 +1,8 @@
 const assert = require("node:assert/strict");
-const fs = require("node:fs");
 const path = require("node:path");
 const test = require("node:test");
-const vm = require("node:vm");
 const { EventEmitter } = require("node:events");
+const { pathToFileURL } = require("node:url");
 
 class EventoCustomizado extends Event {
   constructor(tipo, opcoes = {}) {
@@ -30,7 +29,7 @@ class ClienteMqttFalso extends EventEmitter {
   }
 }
 
-function criarAmbiente() {
+async function criarAmbiente() {
   const cliente = new ClienteMqttFalso();
   let conexoesCriadas = 0;
   let sequenciaUuid = 0;
@@ -63,31 +62,15 @@ function criarAmbiente() {
     warn() {},
     error() {},
   };
-  const contexto = vm.createContext({
+  Object.assign(globalThis, {
     window: janela,
     document: documento,
     console: consoleSilencioso,
     CustomEvent: EventoCustomizado,
-    Event,
-    EventTarget,
-    Error,
-    Map,
-    Set,
-    Date,
-    Math,
-    JSON,
-    Object,
-    Array,
-    String,
-    Number,
-    Promise,
-    TypeError,
   });
   const arquivo = path.resolve(__dirname, "../new-program/mqtt-maquina.js");
 
-  vm.runInContext(fs.readFileSync(arquivo, "utf8"), contexto, {
-    filename: arquivo,
-  });
+  await import(`${pathToFileURL(arquivo).href}?teste=${Date.now()}`);
 
   return {
     cliente,
@@ -97,7 +80,7 @@ function criarAmbiente() {
 }
 
 test("camada MQTT preserva estados e correlaciona comandos", async () => {
-  const ambiente = criarAmbiente();
+  const ambiente = await criarAmbiente();
   const { cliente, janela } = ambiente;
   const api = janela.SoldaTouchMQTT;
 
@@ -138,6 +121,16 @@ test("camada MQTT preserva estados e correlaciona comandos", async () => {
     { tiposSucesso: ["PONTO_ATINGIDO"] },
   );
   const comandoPonto = cliente.publicacoes.at(-1).payload;
+  api.processarMensagemMaquina(
+    api.topicos.resposta,
+    JSON.stringify({
+      idComando: comandoPonto.idComando,
+      tipo: "PONTO_RECEBIDO",
+      ponto: 1,
+    }),
+  );
+  assert.equal(janela.obterEstadoConexaoMaquina().comandosPendentes, 1);
+
   api.processarMensagemMaquina(
     api.topicos.resposta,
     JSON.stringify({
@@ -187,6 +180,6 @@ test("camada MQTT preserva estados e correlaciona comandos", async () => {
   assert.equal(janela.obterEstadoConexaoMaquina().clp, "AGUARDANDO RESPOSTA");
 
   const capacidades = janela.SoldaTouchIntegracaoFisica.obterCapacidades();
-  assert.equal(capacidades.movimentoManual, false);
-  assert.equal(capacidades.soldagem, false);
+  assert.equal(capacidades.movimentoManual, true);
+  assert.equal(capacidades.soldagem, true);
 });

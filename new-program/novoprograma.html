@@ -238,10 +238,10 @@ MODO DE REPRODUÇÃO (SEQUENCIAL/SINGULAR)
   </button>
 </div>
 
-      <button onclick="girarMesa()">GIRAR MESA</button>
+      <button id="btnGirarMesa" type="button">GIRAR MESA</button>
       <button onclick="salvarPonto()">SALVAR PONTO</button>
 
-      <button onclick="salvarPrograma()">SALVAR PROGRAMA</button>
+      <button id="btnSalvarPrograma" type="button">SALVAR PROGRAMA</button>
 
       <button id="btnIniciarReproducao" type="button">
         ▶ INICIAR REPRODUÇÃO
@@ -361,15 +361,8 @@ MODO DE REPRODUÇÃO (SEQUENCIAL/SINGULAR)
 
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/DRACOLoader.js"></script>
 
-    <script type="module" src="./firebase-programas.js"></script>
-
-  
     <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
-<script src="mqtt-maquina.js"></script>
-
-    <script defer src="./novoprograma.js"></script>
-
-     <script type="module" src="./simulacao-integrada.mjs"></script>
+    <script type="module" src="./bootstrap.js"></script>
      
   </body>
 </html>

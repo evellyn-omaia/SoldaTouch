@@ -1,10 +1,7 @@
-// ======================================================
-// FIREBASE
-// ======================================================
+// Controlador da página inicial e de sua sessão Firebase.
 
-import { auth, db } from "../solda-login/firebase.js";
+import { auth, db } from "../src/services/firebase/client.js";
 import {
-  getDatabase,
   ref,
   get,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";

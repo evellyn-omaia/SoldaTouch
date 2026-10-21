@@ -1,7 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-
 import { getAuth } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-
 import { getDatabase } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
 const firebaseConfig = {
@@ -11,37 +9,16 @@ const firebaseConfig = {
   projectId: "projeto-solda",
   storageBucket: "projeto-solda.firebasestorage.app",
   messagingSenderId: "355208250825",
-  appId: "1:355208250825:web:92ddd629ace90ae38f5418"
+  appId: "1:355208250825:web:92ddd629ace90ae38f5418",
 };
 
-const app =
-  initializeApp(firebaseConfig);
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getDatabase(app);
 
-const auth =
-  getAuth(app);
+// Instância isolada usada para cadastrar operadores sem encerrar
+// a sessão administrativa atual.
+const appOperadores = initializeApp(firebaseConfig, "appOperadores");
+const authOperadores = getAuth(appOperadores);
 
-const db =
-  getDatabase(app);
-
-
-// ====================================
-// FIREBASE SECUNDÁRIO
-// usado para cadastrar operadores
-// sem deslogar o administrador
-// ====================================
-
-const appOperadores =
-  initializeApp(
-    firebaseConfig,
-    "appOperadores"
-  );
-
-const authOperadores =
-  getAuth(appOperadores);
-
-
-export {
-  auth,
-  db,
-  authOperadores
-};
+export { auth, authOperadores, db };

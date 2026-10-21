@@ -1,4 +1,4 @@
-// ELEMENTOS
+// Navegação e comportamento visual da página inicial.
 const btnMenu = document.getElementById("btnMenu");
 
 const ladoDireito = document.getElementById("statusMaquina");
@@ -152,6 +152,10 @@ function novoPrograma() {
   window.location.href =
     "../new-program/novoprograma.html";
 }
+
+document
+  .getElementById("btnNovoPrograma")
+  ?.addEventListener("click", novoPrograma);
 
 
 
