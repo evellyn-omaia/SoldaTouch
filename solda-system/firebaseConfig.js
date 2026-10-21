@@ -4,7 +4,6 @@
 
 import { auth, db } from "../solda-login/firebase.js";
 import {
-  getDatabase,
   ref,
   get,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";

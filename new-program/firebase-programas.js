@@ -230,8 +230,7 @@ BUSCAR OPERADORES DA EMPRESA
 window.buscarOperadoresEmpresaFirebase =
 async function() {
 
-  const usuario =
-    await esperarUsuarioLogado();
+  await esperarUsuarioLogado();
 
   const empresaId =
     sessionStorage.getItem(

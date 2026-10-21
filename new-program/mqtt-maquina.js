@@ -4,16 +4,7 @@ MQTT - SOLDATECH
 =====================================
 */
 
-/*
-Broker MQTT local (ver pasta mqtt-broker/
-na raiz do projeto). Roda no mesmo PC do
-Node-RED, sem depender de nuvem.
-
-Se o app for aberto de OUTRO computador/
-tablet na mesma rede (não o PC onde o
-broker está rodando), troque "localhost"
-pelo IP desse PC na rede local.
-*/
+// Broker HiveMQ Cloud compartilhado pelo navegador e pelo Node-RED.
 const MQTT_BROKER =
   "wss://d86f195585704b50bc165c7872060e82.s1.eu.hivemq.cloud:8884/mqtt";
 

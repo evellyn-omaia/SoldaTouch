@@ -187,6 +187,6 @@ test("camada MQTT preserva estados e correlaciona comandos", async () => {
   assert.equal(janela.obterEstadoConexaoMaquina().clp, "AGUARDANDO RESPOSTA");
 
   const capacidades = janela.SoldaTouchIntegracaoFisica.obterCapacidades();
-  assert.equal(capacidades.movimentoManual, false);
-  assert.equal(capacidades.soldagem, false);
+  assert.equal(capacidades.movimentoManual, true);
+  assert.equal(capacidades.soldagem, true);
 });

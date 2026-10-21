@@ -110,17 +110,6 @@ body::after {
     inset 0 0 18px rgba(0, 229, 255, 0.04);
 }
 
-/* LOGO */
-
-.logo {
-  width: 190px;
-  display: block;
-  margin: 0 auto 18px;
-  filter:
-    drop-shadow(0 0 12px rgba(0, 229, 255, 0.55))
-    drop-shadow(0 0 24px rgba(37, 99, 235, 0.35));
-}
-
 /* HERO */
 
 .hero {
@@ -468,10 +457,6 @@ button:hover {
       max(14px, env(safe-area-inset-right))
       max(18px, env(safe-area-inset-bottom))
       max(14px, env(safe-area-inset-left));
-  }
-
-  .logo {
-    width: 130px;
   }
 
   .lista {

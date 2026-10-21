@@ -4,7 +4,7 @@
     "type": "tab",
     "label": "SoldaTech - Ponte MQTT <-> CLP",
     "disabled": false,
-    "info": "Ponte entre o broker MQTT local (mqtt-broker/, o mesmo que o navegador usa via new-program/mqtt-maquina.js) e o CLP real via Modbus TCP.\n\nAntes de ligar em produção:\n1. Preencha o node \"Conectar ao CLP (on start)\" com o IP/porta/unit id do CLP.\n2. Preencha o mapa de coils/registradores nesse mesmo node conforme o programa do seu CLP.\n3. Instale a dependência modbus-serial (ver README.md desta pasta).\n\nEnquanto isso não for feito, o app continua funcionando normalmente em modo SIMULAÇÃO (o checkbox \"Controlar a máquina real\" na tela de produção fica desligado por padrão)."
+    "info": "Ponte entre o HiveMQ Cloud (o mesmo broker usado pelo navegador em new-program/mqtt-maquina.js) e o CLP real via Modbus TCP.\n\nAntes de ligar em produção:\n1. Preencha o node \"Conectar ao CLP (on start)\" com o IP/porta/unit id do CLP.\n2. Preencha o mapa de coils/registradores nesse mesmo node conforme o programa do seu CLP.\n3. Instale a dependência modbus-serial (ver README.md desta pasta).\n4. Configure as credenciais do HiveMQ no node do broker.\n\nEnquanto isso não for feito, o app continua funcionando normalmente em modo SIMULAÇÃO (o checkbox \"Controlar a máquina real\" na tela de produção fica desligado por padrão)."
   },
   {
     "id": "brokerSoldaTech",
@@ -41,7 +41,7 @@
     "type": "comment",
     "z": "tabSoldaTech",
     "name": "Broker HiveMQ Cloud (o mesmo do app/GitHub Pages) - usuario/senha ficam na config do broker",
-    "info": "Este flow aponta para o broker MQTT local do projeto (pasta mqtt-broker/ na raiz), que roda no mesmo PC do Node-RED, em mqtt://localhost:1883. Não precisa de conta nem senha - é o mesmo broker que o navegador usa (via ws://localhost:8888 em new-program/mqtt-maquina.js).\n\nSe este PC ficar acessível para além da sua rede local (porta exposta na internet), adicione autenticação em mqtt-broker/server.js antes disso - hoje qualquer cliente na rede pode publicar em qualquer tópico, inclusive fingindo ser o CLP.",
+    "info": "Este flow aponta para o HiveMQ Cloud, o mesmo broker usado pelo app publicado no GitHub Pages. Configure no node MQTT uma credencial própria do Node-RED e restrinja as permissões por ACL conforme o README desta pasta.",
     "x": 160,
     "y": 60,
     "wires": []

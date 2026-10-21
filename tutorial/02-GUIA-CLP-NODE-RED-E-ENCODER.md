@@ -13,17 +13,17 @@ coisa realmente vive, caso precise abrir e olhar.
 Pense em 4 "estações" que precisam conversar entre si:
 
 ```
-[Navegador]  <--MQTT-->  [Broker MQTT local]  <--MQTT-->  [Node-RED]  <--Modbus TCP-->  [CLP real]
- (o app 3D)                (mqtt-broker/)                (node-red/)                  (motores de verdade)
+[Navegador]  <--MQTT seguro-->  [HiveMQ Cloud]  <--MQTT seguro-->  [Node-RED]  <--Modbus TCP-->  [CLP real]
+ (o app 3D)                  (broker MQTT)                    (node-red/)                  (motores de verdade)
 ```
 
 - **Navegador**: onde você vê o modelo 3D e aperta os botões. Ele
   nunca fala direto com o CLP — só publica "comandos" (tipo "quero
   subir") e escuta "respostas"/"status" via MQTT.
-- **Broker MQTT local**: um "correio" que só entrega mensagens entre
-  quem está inscrito nos mesmos assuntos (tópicos). Não entende nada
-  de solda ou CLP, só repassa mensagens. Fica no arquivo
-  `mqtt-broker/server.js`.
+- **HiveMQ Cloud**: o "correio" MQTT que entrega mensagens entre quem está
+  inscrito nos mesmos assuntos (tópicos). O navegador e o Node-RED usam o
+  mesmo cluster com conexões TLS; credenciais e ACLs devem ser configuradas
+  conforme `node-red/README.md`.
 - **Node-RED**: é o "tradutor". Ele escuta os comandos que chegam do
   navegador via MQTT, e os transforma em leitura/escrita Modbus TCP no
   CLP (que é a língua que o CLP fala). E faz o caminho inverso também:

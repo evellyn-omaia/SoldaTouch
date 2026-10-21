@@ -12,7 +12,7 @@ Navegador (novoprograma.js)
       │  MQTT (wss://.../mqtt)
       ▼
 Broker MQTT (HiveMQ Cloud)
-      │  MQTT (mqtts://.../1883 ou 8883)
+      │  MQTT seguro (mqtts://...:8883)
       ▼
 Node-RED (este flow)
       │  Modbus TCP

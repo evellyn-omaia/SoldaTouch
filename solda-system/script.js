@@ -153,6 +153,10 @@ function novoPrograma() {
     "../new-program/novoprograma.html";
 }
 
+document
+  .getElementById("btnNovoPrograma")
+  ?.addEventListener("click", novoPrograma);
+
 
 
 // =====================================

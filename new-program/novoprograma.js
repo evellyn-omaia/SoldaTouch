@@ -678,61 +678,6 @@ function ajustarModeloNaCena(modelo) {
 }
 
 /* =====================================
-REFERÊNCIAS VISUAIS DO PROCESSO
-===================================== */
-
-const materialcabecote = new THREE.MeshPhysicalMaterial({
-  color: 0xff8800,
-  emissive: 0xff6600,
-  emissiveIntensity: 0.35,
-  metalness: 1,
-  roughness: 0.25,
-});
-
-const cabecote = new THREE.Group();
-
-const corpocabecote = new THREE.Mesh(
-  new THREE.CylinderGeometry(0.08, 0.18, 1.1, 32),
-  materialcabecote,
-);
-
-corpocabecote.rotation.z = Math.PI / 2;
-// cabecote.add(corpocabecote);
-
-const ponteiracabecote = new THREE.Mesh(
-  new THREE.ConeGeometry(0.16, 0.35, 32),
-  materialcabecote,
-);
-
-ponteiracabecote.rotation.z = -Math.PI / 2;
-ponteiracabecote.position.x = -0.7;
-
-const materialArame = new THREE.MeshPhysicalMaterial({
-  color: 0xb45309,
-  metalness: 1,
-  roughness: 0.3,
-});
-
-const roloArame = new THREE.Mesh(
-  new THREE.CylinderGeometry(0.22, 0.22, 0.08, 32),
-  materialArame,
-);
-
-roloArame.rotation.x = Math.PI / 2;
-roloArame.position.set(0.35, 0, -0.2);
-// cabecote.add(roloArame);
-
-const fioArame = new THREE.Mesh(
-  new THREE.CylinderGeometry(0.015, 0.015, 0.45, 8),
-  materialArame,
-);
-
-fioArame.rotation.z = Math.PI / 2;
-fioArame.position.set(-0.85, 0, 0);
-
-const luzSolda = new THREE.PointLight(0x00bbff, 0.3, 2);
-
-/* =====================================
 ESTADO LÓGICO DA MÁQUINA
 ===================================== */
 const MODO_CALIBRACAO = false;
@@ -820,18 +765,6 @@ const EstadoExecucao = {
 
 let estadoExecucao = EstadoExecucao.PARADA;
 
-/*
-Na simulação esperamos 1 segundo.
-
-Futuramente este tempo será
-substituído pela confirmação
-MESA_READY vinda do CLP.
-*/
-
-const TEMPO_PREPARACAO_MESA_MS = 1000;
-
-const TEMPO_CONFIRMACAO_PECA_MS = 3000;
-
 const ModoIntegracaoMaquina = Object.freeze({
   SIMULACAO: "SIMULACAO",
   CLP_CONFIRMADO: "CLP_CONFIRMADO",
@@ -892,8 +825,6 @@ if (chkMaquinaReal) {
     aplicarModoMaquinaReal(chkMaquinaReal.checked);
   });
 }
-
-let aguardandoTrocaPeca = false;
 
 const relogioAnimacao = new THREE.Clock();
 
@@ -1393,7 +1324,6 @@ let indicePontoAtual = 0;
 let filaProducao = [];
 let indiceFila = 0;
 let repeticaoAtual = 0;
-let producaoCancelada = false;
 let inicioExecucao = Date.now();
 let inicioProducao = null;
 let fimProducao = null;
@@ -2246,53 +2176,12 @@ async function solicitarComandoMaquina(comando, dados = {}, opcoes = {}) {
   return true;
 }
 
-async function iniciarMesaAutomatica() {
-  girando = true;
-
-  atualizarStatusMesa("GIRANDO");
-
-  await solicitarComandoMaquina("MESA_START");
-}
-
 async function pararMesaAutomatica() {
   girando = false;
 
   atualizarStatusMesa("PARADA");
 
   await solicitarComandoMaquina("MESA_STOP");
-}
-
-async function aguardarMesaPronta() {
-  if (modoIntegracaoMaquina === ModoIntegracaoMaquina.CLP_CONFIRMADO) {
-    if (typeof window.aguardarEventoMaquina !== "function") {
-      throw new Error("Camada MQTT não permite aguardar o evento MESA_READY.");
-    }
-
-    await window.aguardarEventoMaquina("MESA_READY");
-    return true;
-  }
-
-  /*
-  =============================
-  SIMULAÇÃO ATUAL
-  =============================
-  */
-
-  await aguardar(TEMPO_PREPARACAO_MESA_MS);
-
-  /*
-  FUTURO:
-
-  return await
-    aguardarConfirmacaoCLP(
-      "MESA_READY"
-    );
-
-  O navegador NÃO deve considerar
-  este delay como segurança física.
-  */
-
-  return true;
 }
 
 function girarMesa() {
@@ -2319,6 +2208,8 @@ function girarMesa() {
     rotacaoZ: mesaReal?.rotation.z,
   });
 }
+
+document.getElementById("btnGirarMesa")?.addEventListener("click", girarMesa);
 
 function normalizarAnguloGraus(anguloGraus) {
   return ((anguloGraus % 360) + 360) % 360;
@@ -3105,6 +2996,11 @@ async function salvarPrograma() {
     alert("Não foi possível salvar o programa.");
   }
 }
+
+document
+  .getElementById("btnSalvarPrograma")
+  ?.addEventListener("click", salvarPrograma);
+
 async function carregarProgramaFila(
   nomePrograma,
   iniciarAutomaticamente = true,
@@ -3305,55 +3201,6 @@ async function carregarProgramaParaExecucao() {
   }
 }
 
-async function carregarPrograma() {
-  const nome = localStorage.getItem("programaAtual");
-
-  if (!nome) {
-    return;
-  }
-
-  if (!window.carregarProgramaFirebase) {
-    console.warn("Função carregarProgramaFirebase não encontrada.");
-
-    return;
-  }
-
-  try {
-    const programa = await window.carregarProgramaFirebase(nome);
-
-    if (!programa) {
-      return;
-    }
-
-    const pontosCarregados = prepararPontosDoPrograma(programa);
-
-    if (pontosCarregados === null) {
-      return;
-    }
-
-    pontos = pontosCarregados;
-
-    executandoPrograma = false;
-    programaPausado = false;
-    indicePontoAtual = 0;
-
-    atualizarLista();
-
-    const statusPrograma = document.getElementById("statusPrograma");
-
-    if (statusPrograma) {
-      statusPrograma.innerText = `Programa "${programa.nome}" carregado para edição`;
-    }
-  } catch (erro) {
-    console.error("Erro ao carregar programa:", erro);
-
-    const statusPrograma = document.getElementById("statusPrograma");
-
-    if (statusPrograma) {
-      statusPrograma.innerText = "Erro ao carregar o programa.";
-    }
-  }
-}
 function mostrarBotaoIniciarCiclo() {
   const botao = document.getElementById("btnIniciarCiclo");
 
@@ -3930,8 +3777,6 @@ a fila salva no Firebase.
         programaPausado = false;
 
         estadoExecucao = EstadoExecucao.AGUARDANDO_INICIO;
-
-        aguardandoTrocaPeca = false;
       } else if (statusRecuperacao === "AGUARDANDO_PECA") {
         /*
   Uma peça terminou e estamos
@@ -3943,8 +3788,6 @@ a fila salva no Firebase.
         programaPausado = false;
 
         estadoExecucao = EstadoExecucao.AGUARDANDO_PECA;
-
-        aguardandoTrocaPeca = true;
       } else {
         /*
   Produção interrompida no
@@ -3962,8 +3805,6 @@ a fila salva no Firebase.
         inicioPausaAtual = producaoRecuperada.inicioPausaAtual || null;
 
         estadoExecucao = EstadoExecucao.PAUSADO;
-
-        aguardandoTrocaPeca = false;
       }
 
       atualizarStatusMesa("PARADA");
@@ -3996,8 +3837,6 @@ a fila salva no Firebase.
       executandoPrograma = false;
 
       estadoExecucao = EstadoExecucao.PARADA;
-
-      aguardandoTrocaPeca = false;
     }
 
     /*
@@ -4083,8 +3922,6 @@ NOVA PRODUÇÃO
 
           estadoExecucao = EstadoExecucao.AGUARDANDO_INICIO;
 
-          aguardandoTrocaPeca = false;
-
           // Garante que a mesa esteja parada.
           await pararMesaAutomatica();
 
@@ -4139,8 +3976,6 @@ NOVA PRODUÇÃO
 
             estadoExecucao = EstadoExecucao.AGUARDANDO_INICIO;
 
-            aguardandoTrocaPeca = false;
-
             girando = false;
 
             atualizarStatusMesa("PARADA");
@@ -4160,8 +3995,6 @@ NOVA PRODUÇÃO
             programaPausado = false;
 
             estadoExecucao = EstadoExecucao.AGUARDANDO_PECA;
-
-            aguardandoTrocaPeca = true;
 
             girando = false;
 
@@ -4183,8 +4016,6 @@ NOVA PRODUÇÃO
             programaPausado = true;
 
             estadoExecucao = EstadoExecucao.PAUSADO;
-
-            aguardandoTrocaPeca = false;
 
             girando = false;
 
@@ -4315,41 +4146,6 @@ recuperado do Firebase.
   }
 } // <-- fecha iniciarSistema()
 
-function salvarBackupProgramas() {
-  const backup = [];
-
-  for (let i = 0; i < localStorage.length; i++) {
-    const chave = localStorage.key(i);
-
-    if (
-      chave === "programaAtual" ||
-      chave === "filaProducao" ||
-      chave === "historicoProducao" ||
-      chave === "historicoJaSalvo" ||
-      chave.startsWith("firebase:")
-    ) {
-      continue;
-    }
-
-    try {
-      const dados = JSON.parse(localStorage.getItem(chave));
-
-      if (!dados || !Array.isArray(dados.pontos)) {
-        continue;
-      }
-
-      backup.push({
-        chave: chave,
-        dados: dados,
-      });
-    } catch (erro) {
-      console.warn("Ignorado no backup:", chave);
-    }
-  }
-
-  localStorage.setItem("backupProgramas", JSON.stringify(backup));
-}
-
 function recuperarBackupProgramas() {
   const programasAtuais = [];
 
@@ -4362,7 +4158,7 @@ function recuperarBackupProgramas() {
       if (dados && Array.isArray(dados.pontos)) {
         programasAtuais.push(chave);
       }
-    } catch (erro) {}
+    } catch {}
   }
 
   if (programasAtuais.length > 0) return;
@@ -4554,8 +4350,6 @@ async function confirmarPecaPosicionada() {
 
   await carregarProgramaFila(itemAtual.programa, false);
 
-  aguardandoTrocaPeca = false;
-
   /*
   Inicia SEM nova contagem.
 
@@ -4708,8 +4502,6 @@ troca da peça.
   if (repeticaoAtual < quantidadeTotal) {
     estadoExecucao = EstadoExecucao.AGUARDANDO_PECA;
 
-    aguardandoTrocaPeca = true;
-
     const statusPrograma = document.getElementById("statusPrograma");
 
     if (statusPrograma) {
@@ -4751,8 +4543,6 @@ troca da peça.
     const proximoItem = filaProducao[indiceFila];
 
     estadoExecucao = EstadoExecucao.AGUARDANDO_PECA;
-
-    aguardandoTrocaPeca = true;
 
     if (window.salvarProducaoAtualFirebase) {
       try {

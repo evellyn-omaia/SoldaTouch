@@ -3,7 +3,6 @@ import {
   VALIDADE_MS,
   lerSessao,
   validarItens,
-  solicitarGestoDemonstracao,
 } from "./visao-core.mjs";
 import { CameraGestos } from "./visao-camera.mjs";
 

@@ -694,9 +694,7 @@ canvas {
   margin-bottom: 20px;
 }
 
-.cabecalho-operadores h2,
-.ranking-operadores h2,
-.pausas-equipe h2 {
+.cabecalho-operadores h2 {
   margin: 0;
 
   color: #f4f7fb;
@@ -803,25 +801,6 @@ canvas {
 }
 
 
-/* =========================================
-   RANKINGS
-========================================= */
-
-.ranking-operadores {
-  margin-top: 30px;
-}
-
-.ranking-grid {
-  display: grid;
-
-  grid-template-columns:
-    repeat(3, minmax(0, 1fr));
-
-  gap: 16px;
-
-  margin-top: 16px;
-}
-
 .ranking-card {
   position: relative;
 
@@ -888,29 +867,6 @@ canvas {
 }
 
 
-/* =========================================
-   PAUSAS
-========================================= */
-
-.pausas-equipe {
-  margin-top: 30px;
-
-  padding: 20px;
-
-  border-radius: 14px;
-
-  background:
-    linear-gradient(
-      145deg,
-      rgba(10, 24, 44, 0.96),
-      rgba(4, 13, 28, 0.96)
-    );
-
-  border:
-    1px solid
-    rgba(0, 191, 255, 0.1);
-}
-
 #resumoPausasEquipe {
   margin-top: 18px;
 
@@ -961,41 +917,6 @@ canvas {
   box-shadow:
     0 0 20px
     rgba(0, 191, 255, 0.04);
-}
-
-
-/* BOTÃO SUPERIOR */
-
-.operador-accordion-topo {
-  width: 100%;
-
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-
-  gap: 15px;
-
-  padding: 16px 18px;
-
-  border: none;
-  outline: none;
-
-  background: transparent;
-
-  color: #ffffff;
-
-  cursor: pointer;
-
-  text-align: left;
-
-  font-family: inherit;
-
-  transition: background 0.2s ease;
-}
-
-.operador-accordion-topo:hover {
-  background:
-    rgba(0, 191, 255, 0.05);
 }
 
 
@@ -1065,29 +986,6 @@ canvas {
 }
 
 
-/* SETA */
-
-.operador-seta {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  width: 30px;
-  height: 30px;
-
-  border-radius: 7px;
-
-  color: #00c8ff;
-
-  background:
-    rgba(0, 200, 255, 0.07);
-
-  font-size: 12px;
-
-  transition: 0.2s ease;
-}
-
-
 /* CONTEÚDO ABERTO */
 
 .operador-accordion-conteudo {
@@ -1119,10 +1017,6 @@ canvas {
   .cabecalho-operadores {
     flex-direction: column;
     align-items: flex-start;
-  }
-
-  .ranking-grid {
-    grid-template-columns: 1fr;
   }
 
   .periodo-operadores-geral {
